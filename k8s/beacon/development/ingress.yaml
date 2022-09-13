@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: __NAMESPACE_NAME__-backend
+  namespace: __NAMESPACE_NAME__
+  annotations:
+    kubernetes.io/ingress.class: 'nginx'
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    kubernetes.io/tls-acme: 'true'
+spec:
+  tls:
+    - hosts:
+        - __NAMESPACE_NAME__.dev.gke.papers.tech
+      secretName: __NAMESPACE_NAME__-dev-tls
+  rules:
+    - host: __NAMESPACE_NAME__.dev.gke.papers.tech
+      http:
+        paths:
+          - backend:
+              serviceName: __NAMESPACE_NAME__-backend-service
+              servicePort: 3000

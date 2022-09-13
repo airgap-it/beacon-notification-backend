@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __NAMESPACE_NAME__-backend
+  namespace: __NAMESPACE_NAME__
+  labels:
+    app: __NAMESPACE_NAME__-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: __NAMESPACE_NAME__-backend
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: __NAMESPACE_NAME__-backend
+    spec:
+      initContainers:
+        - name: beacon-notification-migration
+          image: __TO_BE_REPLACED_BY_IMAGE_TAG__
+          imagePullPolicy: IfNotPresent
+          command: ['npm', 'run', 'typeorm', 'migration:run']
+          envFrom:
+            - configMapRef:
+                name: __NAMESPACE_NAME__-config-map
+            - secretRef:
+                name: __NAMESPACE_NAME__-secret
+      containers:
+        - name: __NAMESPACE_NAME__-backend
+          image: __TO_BE_REPLACED_BY_IMAGE_TAG__
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: __NAMESPACE_NAME__-config-map
+            - secretRef:
+                name: __NAMESPACE_NAME__-secret
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+      imagePullSecrets:
+        - name: regsecret
+status: {}

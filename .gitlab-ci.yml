@@ -1,0 +1,223 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  GOOGLE_TAG: eu.gcr.io/papers-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:$CI_COMMIT_SHA
+  GOOGLE_TAG_LATEST: eu.gcr.io/papers-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:latest
+  GOOGLE_TAG_DEV: eu.gcr.io/papers-dev-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:$CI_COMMIT_SHA
+  GOOGLE_TAG_LATEST_DEV: eu.gcr.io/papers-dev-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:latest
+  NAMESPACE: beacon-notification-oracle
+
+
+default:
+  image: docker/compose
+
+services:
+  - docker:dind
+
+stages:
+  - build
+  - test
+  - publish
+  - deploy
+  - provision
+
+build:
+  stage: build
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT --key-file key.json
+    - gcloud config set project $GCLOUD_PROJECT
+    - gcloud config set account $GCLOUD_ACCOUNT
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud auth configure-docker
+  script:
+    - docker build --cache-from $GOOGLE_TAG_LATEST -t $GOOGLE_TAG .
+    - docker tag $GOOGLE_TAG $GOOGLE_TAG_LATEST
+    - docker push $GOOGLE_TAG
+    - docker push $GOOGLE_TAG_LATEST
+  tags:
+    - docker
+
+test:
+  stage: test
+  variables:
+    POSTGRES_DB: "postgres"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "postgres"
+  services:
+    - postgres:9.6
+  before_script:
+    - docker rm -f unit-$CI_COMMIT_SHA || true
+  script:
+    - docker run --name unit-$CI_COMMIT_SHA -e POSTGRES_DBNAME=postgres -e POSTGRES_HOST=$POSTGRES_PORT_5432_TCP_ADDR $GOOGLE_TAG  /bin/bash -c "npm run test:cov"
+    - docker run --name e2e-$CI_COMMIT_SHA -e POSTGRES_DBNAME=postgres -e POSTGRES_HOST=$POSTGRES_PORT_5432_TCP_ADDR $GOOGLE_TAG /bin/bash -c "npm run test:e2e"
+    
+    # - docker run --name lint-$CI_COMMIT_SHA $GOOGLE_TAG npm run lint-ci
+    # - docker cp unit-$CI_COMMIT_SHA:/app/coverage/lcov.info lcov.info
+    # - docker cp lint-$CI_COMMIT_SHA:/app/lintReport.json lintReport.json
+  after_script:
+    - docker rm -f unit-$CI_COMMIT_SHA || true
+    - docker rm -f lint-$CI_COMMIT_SHA || true
+    - docker rm -f postgres-$CI_COMMIT_SHA || true
+  tags:
+    - docker
+#   artifacts:
+#     paths:
+#       - lcov.info
+#       - lintReport.json
+
+publish-dev:
+  stage: publish
+  only:
+   - master
+   - develop
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY_DEV > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT_DEV --key-file key.json
+    - gcloud config set account $GCLOUD_ACCOUNT_DEV
+    - gcloud config set project $GCLOUD_PROJECT_DEV
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud auth configure-docker
+  script:
+    - docker tag $GOOGLE_TAG $GOOGLE_TAG_DEV
+    - docker tag $GOOGLE_TAG $GOOGLE_TAG_LATEST_DEV
+    - docker push $GOOGLE_TAG_DEV
+    - docker push $GOOGLE_TAG_LATEST_DEV
+  tags:
+    - docker
+
+publish-prod:
+  stage: publish
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT --key-file key.json
+    - gcloud config set account $GCLOUD_ACCOUNT
+    - gcloud config set project $GCLOUD_PROJECT
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud auth configure-docker
+  script:
+    - docker tag $GOOGLE_TAG $GOOGLE_TAG_LATEST
+    - docker push $GOOGLE_TAG
+    - docker push $GOOGLE_TAG_LATEST
+  only:
+    - master
+  tags:
+    - docker
+
+k8s-deploy-development:
+  stage: deploy
+  when: manual
+  only:
+   - master
+   - develop
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY_DEV > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT_DEV --key-file key.json
+    - gcloud config set account $GCLOUD_ACCOUNT_DEV
+    - gcloud config set project $GCLOUD_PROJECT_DEV
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud container clusters get-credentials papers-cluster-development
+  script:
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$GOOGLE_TAG_DEV"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TX_BACKEND_URL__|"$TX_BACKEND_URL_DEV"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TX_BACKEND_TOKEN__|"$TX_BACKEND_TOKEN_DEV"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_PASSWORD__|"$POSTGRES_DEV_PW"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_DB_NAME__|"$POSTGRES_DB_NAME_DEV"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_USERNAME__|"$POSTGRES_USERNAME_DEV"|g" {} +
+    
+    
+    - kubectl apply -f k8s/beacon/common/namespace.yaml
+    - kubectl apply -f k8s/beacon/development/ --recursive
+    - kubectl apply -f k8s/beacon/common/ --recursive
+  tags:
+    - docker
+  environment:
+    name: beacon-notification-oracle-development
+    url: https://beacon-notification-oracle.dev.gke.papers.tech/
+
+k8s-deploy-production:
+  stage: deploy
+  when: manual
+  only:
+   - master
+   - develop
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT --key-file key.json
+    - gcloud config set account $GCLOUD_ACCOUNT
+    - gcloud config set project $GCLOUD_PROJECT
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud container clusters get-credentials papers-cluster-production
+
+  script:
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$GOOGLE_TAG"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TX_BACKEND_URL__|"$TX_BACKEND_URL_PROD"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TX_BACKEND_TOKEN__|"$TX_BACKEND_TOKEN_PROD"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_PASSWORD__|"$POSTGRES_PROD_PW"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_DB_NAME__|"$POSTGRES_DB_NAME_PROD"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_USERNAME__|"$POSTGRES_USERNAME_PROD"|g" {} +
+    
+    
+    - kubectl apply -f k8s/beacon/common/namespace.yaml
+    - kubectl apply -f k8s/beacon/production/ --recursive
+    - kubectl apply -f k8s/beacon/common/ --recursive
+  tags:
+    - docker
+  environment:
+    name: beacon-notification-oracle-production
+    url: https://beacon-notification-oracle.prod.gke.papers.tech/
+
+provision-db-development:
+  stage: provision
+  only:
+   - develop
+   - master
+  when: manual
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY_DEV > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT_DEV --key-file key.json
+    - gcloud config set account $GCLOUD_ACCOUNT_DEV
+    - gcloud config set project $GCLOUD_PROJECT_DEV
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud container clusters get-credentials papers-cluster-development
+    - export STOLON_PROXY=$(kubectl get pods --namespace postgres | grep postgres | awk 'NR==1{print $1}')
+  script:
+    - kubectl exec -n postgres $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_DEV_MASTER_PASSWORD && psql --host=localhost --username=$PG_DEV_MASTER_USERNAME_2 postgres -c \"CREATE DATABASE $POSTGRES_DB_NAME_DEV\""  || true
+    - kubectl exec -n postgres $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_DEV_MASTER_PASSWORD && psql --host=localhost --username=$PG_DEV_MASTER_USERNAME_2 postgres -c \"CREATE USER $POSTGRES_USERNAME_DEV WITH ENCRYPTED PASSWORD '$POSTGRES_DEV_PW'\"" || true
+    - kubectl exec -n postgres $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_DEV_MASTER_PASSWORD && psql --host=localhost --username=$PG_DEV_MASTER_USERNAME_2 postgres -c \"GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB_NAME_DEV to $POSTGRES_USERNAME_DEV\"" || true
+
+    # for newer typorm features / because of old postgres version
+    - kubectl exec -n postgres $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_DEV_MASTER_PASSWORD && psql --host=localhost --username=$PG_DEV_MASTER_USERNAME_2 postgres -c \"CREATE EXTENSION IF NOT EXISTS \"uuid_ossp\";\"" || true
+  tags:
+    - docker   
+
+  
+provision-db-production:
+  stage: provision
+  only:
+    - master
+  when: manual
+  image: google/cloud-sdk
+  before_script:
+    - echo $GCLOUD_GOOGLE_KEY > key.json
+    - gcloud auth activate-service-account $GCLOUD_ACCOUNT --key-file key.json
+    - gcloud config set account $GCLOUD_ACCOUNT
+    - gcloud config set project $GCLOUD_PROJECT
+    - gcloud config set compute/zone $GCLOUD_ZONE
+    - gcloud container clusters get-credentials papers-cluster-production
+    - export STOLON_PROXY=$(kubectl get pods | grep stolon-proxy | awk 'NR==1{print $1}')
+  script:
+    - kubectl exec $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_PROD_MASTER_PASSWORD && psql --host=localhost --username=$PG_PROD_MASTER_USERNAME postgres -c \"CREATE DATABASE $POSTGRES_DB_NAME_PROD\""  || true
+    - kubectl exec $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_PROD_MASTER_PASSWORD && psql --host=localhost --username=$PG_PROD_MASTER_USERNAME postgres -c \"CREATE USER $POSTGRES_USERNAME_PROD WITH ENCRYPTED PASSWORD '$POSTGRES_PROD_PW'\"" || true
+    - kubectl exec $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_PROD_MASTER_PASSWORD && psql --host=localhost --username=$PG_PROD_MASTER_USERNAME postgres -c \"GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB_NAME_PROD to $POSTGRES_USERNAME_PROD\"" || true
+    - kubectl exec $STOLON_PROXY -- bash -c "export PGPASSWORD=$PG_PROD_MASTER_PASSWORD && psql --host=localhost --username=$PG_PROD_MASTER_USERNAME --dbname=$POSTGRES_DB_NAME_PROD postgres -c 'CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'" || true
+ 
+  tags:
+    - docker
