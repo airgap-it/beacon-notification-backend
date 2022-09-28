@@ -18,9 +18,17 @@ export class AccountService {
   ) {}
 
   async create(account: Account) {
-    const createdAccount = await this.accountRepository.create(account);
-    const savedAccount = await this.accountRepository.save(createdAccount);
-    return savedAccount;
+    try {
+      const createdAccount = this.accountRepository.create(account);
+      const savedAccount = await this.accountRepository.save(createdAccount);
+      return savedAccount;
+    } catch (e) {
+      const savedAccount = await this.accountRepository.findOne({
+        accountPublicKey: account.accountPublicKey,
+        backendUrl: account.backendUrl,
+      });
+      return savedAccount;
+    }
   }
 
   async getById(id: number) {
@@ -55,7 +63,7 @@ export class AccountService {
       );
     }
 
-    helper.checkSignature(register);
+    await helper.checkSignature(register);
 
     const newAccount = new Account();
     newAccount.name = register.name;
@@ -106,21 +114,31 @@ export class AccountService {
       };
     }
 
-    return axios.post(
-      account.backendUrl,
-      {
-        recievers: [account.address],
-        message: {
-          title: notification.title,
-          body: notification.body,
-        },
-        protocolIdentifier: account.protocolIdentifier,
-        data: notification.payload,
-        deviceIds: notification.devices,
+    const obj: {
+      receivers: string[];
+      message: {
+        title: string;
+        body: string;
+      };
+      protocolIdentifier: string;
+      data: any;
+      deviceIds?: string[];
+    } = {
+      receivers: [account.address],
+      message: {
+        title: notification.title,
+        body: `${notification.sender.name}: ${notification.body}`,
       },
-      {
-        headers: headers,
-      },
-    );
+      protocolIdentifier: account.protocolIdentifier,
+      data: notification.payload,
+    };
+
+    if (notification.devices) {
+      obj.deviceIds = notification.devices;
+    }
+
+    return axios.post(account.backendUrl, obj, {
+      headers: headers,
+    });
   }
 }

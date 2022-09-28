@@ -14,7 +14,7 @@ export interface CurrencyHelper {
     publicKey: string;
     prefix?: Buffer;
   }>;
-  checkSignature(register: RegisterDTO): void;
+  checkSignature(register: RegisterDTO): Promise<void>;
   isAddress(address: string): boolean;
 }
 
