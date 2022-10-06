@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { Connection, Repository } from 'typeorm';
 import Challenge from 'src/entities/challenge.entity';
-import { getKeypairFromSeed } from '../src/utils/crypto';
+import { getKeypairFromSeed, toHex } from '../src/utils/crypto';
 import { TezosAddress, TezosCryptoClient } from '@airgap/coinlib-core';
 
 describe('AppController (e2e) Tezos', () => {
@@ -42,10 +42,13 @@ describe('AppController (e2e) Tezos', () => {
       response.body.timestamp,
       Buffer.from(keyPair.publicKey).toString('hex'),
       'https://example.com',
-    ].join(':');
+    ].join(' ');
+
+    const bytes = toHex(constructedString);
+    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
 
     const cryptoClient = new TezosCryptoClient();
-    const signature = await cryptoClient.signMessage(constructedString, {
+    const signature = await cryptoClient.signMessage(payloadBytes, {
       privateKey: Buffer.from(keyPair.privateKey),
     });
 

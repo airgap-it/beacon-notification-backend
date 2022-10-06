@@ -14,7 +14,7 @@ import Challenge from './entities/challenge.entity';
 import { AccountService } from './services/account.service';
 import { ChallengeService } from './services/challenge.service';
 import { KeypairService } from './services/keypair.service';
-import { CURRENCY_HELPERS, getCurrencyHelper } from './utils/crypto';
+import { CURRENCY_HELPERS, getCurrencyHelper, toHex } from './utils/crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import Account from './entities/account.entity';
 import { Repository } from 'typeorm';
@@ -194,7 +194,10 @@ export class AppController {
         retrieveAccounts.deviceId,
         retrieveAccounts.challenge.id,
         retrieveAccounts.challenge.timestamp,
-      ].join(':');
+      ].join(' ');
+
+      const bytes = toHex(constructedString);
+      const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
 
       const helper = CURRENCY_HELPERS.get(retrieveAccounts.protocolIdentifier);
       const cryptoClient = helper.client;
@@ -205,7 +208,7 @@ export class AppController {
 
       try {
         isValid = await cryptoClient.verifyMessage(
-          constructedString,
+          payloadBytes,
           retrieveAccounts.signature,
           plainPublicKey,
         );

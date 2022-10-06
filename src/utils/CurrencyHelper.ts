@@ -3,6 +3,8 @@ import { Ed25519CryptoClient } from '@airgap/coinlib-core/protocols/Ed25519Crypt
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { ValidationOptions } from 'class-validator';
 import { RegisterDTO } from 'src/dto/Register.dto';
+import * as bs58check from 'bs58check';
+import { toHex } from './crypto';
 
 export interface CurrencyHelper {
   client: Ed25519CryptoClient;
@@ -46,12 +48,23 @@ export abstract class BaseCurrencyHelper implements CurrencyHelper {
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    const concat = Buffer.concat([
+      Buffer.from(new Uint8Array([13, 15, 37, 217])),
+      Buffer.from(register.accountPublicKey, 'hex'),
+    ]);
+
+    const prefixed = bs58check.encode(concat);
+
     const constructedString = [
       register.challenge.id,
       register.challenge.timestamp,
-      result.publicKey,
+      prefixed,
       register.backendUrl,
-    ].join(':');
+    ].join(' ');
+
+    const bytes = toHex(constructedString);
+    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
 
     const { publicKey: plainPublicKey } = await this.toPlainPubkey(
       result.publicKey,
@@ -59,7 +72,7 @@ export abstract class BaseCurrencyHelper implements CurrencyHelper {
 
     if (
       !(await this.client.verifyMessage(
-        constructedString,
+        payloadBytes,
         register.signature,
         plainPublicKey,
       ))

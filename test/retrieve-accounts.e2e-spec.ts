@@ -3,7 +3,11 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { Connection, Repository } from 'typeorm';
-import { getCurrencyHelper, getKeypairFromSeed } from '../src/utils/crypto';
+import {
+  getCurrencyHelper,
+  getKeypairFromSeed,
+  toHex,
+} from '../src/utils/crypto';
 import { TezosCryptoClient } from '@airgap/coinlib-core';
 import { KeyPair } from 'libsodium-wrappers';
 import Account from 'src/entities/account.entity';
@@ -50,10 +54,13 @@ describe('retrieve accounts (e2e)', () => {
         response.body.timestamp,
         Buffer.from(keyPairAddr.publicKey).toString('hex'),
         backendUrl,
-      ].join(':');
+      ].join(' ');
+
+      const bytes = toHex(constructedString);
+      const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
 
       const cryptoClient = new TezosCryptoClient();
-      const signature = await cryptoClient.signMessage(constructedString, {
+      const signature = await cryptoClient.signMessage(payloadBytes, {
         privateKey: Buffer.from(keyPairAddr.privateKey),
       });
       const registerResponse = await request(app.getHttpServer())
@@ -161,16 +168,21 @@ describe('retrieve accounts (e2e)', () => {
       protocolIdentifier: 'xtz',
       deviceId: 'testdevice1',
     };
-    const signature = await new TezosCryptoClient().signMessage(
+
+    const bytes = toHex(
       [
         retrieveAccounts.accountPublicKey,
         retrieveAccounts.protocolIdentifier,
         retrieveAccounts.deviceId,
         challenge_response.body.id,
         challenge_response.body.timestamp,
-      ].join(':'),
-      { privateKey: Buffer.from(keyPairAddress.privateKey) },
+      ].join(' '),
     );
+    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
+
+    const signature = await new TezosCryptoClient().signMessage(payloadBytes, {
+      privateKey: Buffer.from(keyPairAddress.privateKey),
+    });
     const response = await request(app.getHttpServer())
       .post('/retrieve-accounts')
       .send({
@@ -199,10 +211,12 @@ describe('retrieve accounts (e2e)', () => {
             )
           ).getValue(),
         })
-      ).map((obj: any): Account => {
-        obj.timestamp = obj.timestamp.toISOString();
-        return obj as Account;
-      }),
+      ).map(
+        (obj: any): Account => {
+          obj.timestamp = obj.timestamp.toISOString();
+          return obj as Account;
+        },
+      ),
     );
   });
 
@@ -217,16 +231,21 @@ describe('retrieve accounts (e2e)', () => {
       protocolIdentifier: 'xtz',
       deviceId: 'testdevice1',
     };
-    const signature = await new TezosCryptoClient().signMessage(
+
+    const bytes = toHex(
       [
         retrieveAccounts.accountPublicKey,
         retrieveAccounts.protocolIdentifier,
         retrieveAccounts.deviceId,
         challenge_response.body.id,
         challenge_response.body.timestamp,
-      ].join(':'),
-      { privateKey: Buffer.from(keyPairAddress.privateKey) },
+      ].join(' '),
     );
+    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
+
+    const signature = await new TezosCryptoClient().signMessage(payloadBytes, {
+      privateKey: Buffer.from(keyPairAddress.privateKey),
+    });
     const response = await request(app.getHttpServer())
       .post('/retrieve-accounts')
       .send({
@@ -302,10 +321,12 @@ describe('retrieve accounts (e2e)', () => {
             )
           ).getValue(),
         })
-      ).map((obj: any): Account => {
-        obj.timestamp = obj.timestamp.toISOString();
-        return obj as Account;
-      }),
+      ).map(
+        (obj: any): Account => {
+          obj.timestamp = obj.timestamp.toISOString();
+          return obj as Account;
+        },
+      ),
     );
   });
 
@@ -334,10 +355,12 @@ describe('retrieve accounts (e2e)', () => {
             )
           ).getValue(),
         })
-      ).map((obj: any): Account => {
-        obj.timestamp = obj.timestamp.toISOString();
-        return obj as Account;
-      }),
+      ).map(
+        (obj: any): Account => {
+          obj.timestamp = obj.timestamp.toISOString();
+          return obj as Account;
+        },
+      ),
     );
   });
 
