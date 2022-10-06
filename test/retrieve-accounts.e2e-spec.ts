@@ -6,6 +6,7 @@ import { Connection, Repository } from 'typeorm';
 import {
   getCurrencyHelper,
   getKeypairFromSeed,
+  prefixPublicKey,
   toHex,
 } from '../src/utils/crypto';
 import { TezosCryptoClient } from '@airgap/coinlib-core';
@@ -53,7 +54,7 @@ describe('retrieve accounts (e2e)', () => {
         'Tezos Signed Message: ',
         response.body.id,
         response.body.timestamp,
-        Buffer.from(keyPairAddr.publicKey).toString('hex'),
+        prefixPublicKey(Buffer.from(keyPairAddr.publicKey).toString('hex')),
         backendUrl,
       ].join(' ');
 

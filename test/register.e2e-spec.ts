@@ -4,7 +4,11 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { Connection, Repository } from 'typeorm';
 import Challenge from 'src/entities/challenge.entity';
-import { getKeypairFromSeed, toHex } from '../src/utils/crypto';
+import {
+  getKeypairFromSeed,
+  prefixPublicKey,
+  toHex,
+} from '../src/utils/crypto';
 import { TezosAddress, TezosCryptoClient } from '@airgap/coinlib-core';
 
 describe('AppController (e2e) Tezos', () => {
@@ -41,7 +45,7 @@ describe('AppController (e2e) Tezos', () => {
       'Tezos Signed Message: ',
       response.body.id,
       response.body.timestamp,
-      Buffer.from(keyPair.publicKey).toString('hex'),
+      prefixPublicKey(Buffer.from(keyPair.publicKey).toString('hex')),
       'https://example.com',
     ].join(' ');
 
