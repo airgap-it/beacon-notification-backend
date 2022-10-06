@@ -3,6 +3,7 @@ import { Ed25519CryptoClient } from '@airgap/coinlib-core/protocols/Ed25519Crypt
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { ValidationOptions } from 'class-validator';
 import { RegisterDTO } from 'src/dto/Register.dto';
+import { prefixPublicKey, toHex } from './crypto';
 
 export interface CurrencyHelper {
   client: Ed25519CryptoClient;
@@ -46,12 +47,18 @@ export abstract class BaseCurrencyHelper implements CurrencyHelper {
         HttpStatus.BAD_REQUEST,
       );
     }
+
     const constructedString = [
+      'Tezos Signed Message: ',
       register.challenge.id,
       register.challenge.timestamp,
-      result.publicKey,
+      prefixPublicKey(register.accountPublicKey),
       register.backendUrl,
-    ].join(':');
+    ].join(' ');
+
+    const bytes = toHex(constructedString);
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
 
     const { publicKey: plainPublicKey } = await this.toPlainPubkey(
       result.publicKey,
@@ -59,7 +66,7 @@ export abstract class BaseCurrencyHelper implements CurrencyHelper {
 
     if (
       !(await this.client.verifyMessage(
-        constructedString,
+        payloadBytes,
         register.signature,
         plainPublicKey,
       ))

@@ -4,6 +4,7 @@ import { CurrencyHelper } from './CurrencyHelper';
 import { KusamaCurrencyHelper } from './substrate/KusamaCurrencyHelper';
 import { PolkadotCurrencyHelper } from './substrate/PolkadotCurrencyHelper';
 import { TezosCurrencyHelper } from './tezos/TezosCurrencyHelper';
+import * as bs58check from 'bs58check';
 
 // class DummyCryptoClient implements Ed25519CryptoClient {
 //   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -242,4 +243,13 @@ export function getCurrencyHelper(protocolIdentifier: string): CurrencyHelper {
     );
   }
   return CURRENCY_HELPERS.get(protocolIdentifier);
+}
+
+export function prefixPublicKey(rawPublicKey: string) {
+  const concat = Buffer.concat([
+    Buffer.from(new Uint8Array([13, 15, 37, 217])),
+    Buffer.from(rawPublicKey, 'hex'),
+  ]);
+
+  return bs58check.encode(concat);
 }

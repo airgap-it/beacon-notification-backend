@@ -4,7 +4,11 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { Connection, Repository } from 'typeorm';
 import Challenge from 'src/entities/challenge.entity';
-import { getKeypairFromSeed } from '../src/utils/crypto';
+import {
+  getKeypairFromSeed,
+  prefixPublicKey,
+  toHex,
+} from '../src/utils/crypto';
 import { TezosAddress, TezosCryptoClient } from '@airgap/coinlib-core';
 import { KeyPair } from 'libsodium-wrappers';
 import { generateGUID } from '../src/utils/generate-uuid';
@@ -42,14 +46,19 @@ describe('send (e2e) Tezos', () => {
         .expect(200);
 
       const constructedString = [
+        'Tezos Signed Message: ',
         response.body.id,
         response.body.timestamp,
-        Buffer.from(keyPairAddress.publicKey).toString('hex'),
+        prefixPublicKey(Buffer.from(keyPairAddress.publicKey).toString('hex')),
         'https://example.com',
-      ].join(':');
+      ].join(' ');
+
+      const bytes = toHex(constructedString);
+      const payloadBytes =
+        '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
 
       const cryptoClient = new TezosCryptoClient();
-      const signature = await cryptoClient.signMessage(constructedString, {
+      const signature = await cryptoClient.signMessage(payloadBytes, {
         privateKey: Buffer.from(keyPairAddress.privateKey),
       });
       const registerResponse = await request(app.getHttpServer())
@@ -112,16 +121,22 @@ describe('send (e2e) Tezos', () => {
       payload: 'test',
     };
 
-    const signature2 = await new TezosCryptoClient().signMessage(
+    const bytes = toHex(
       [
+        'Tezos Signed Message: ',
         notification.recipient,
         notification.title,
         notification.body,
         notification.timestamp,
         notification.payload,
-      ].join(':'),
-      { privateKey: Buffer.from(keyPairDapp.privateKey) },
+      ].join(' '),
     );
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
+
+    const signature2 = await new TezosCryptoClient().signMessage(payloadBytes, {
+      privateKey: Buffer.from(keyPairDapp.privateKey),
+    });
     const resp = await request(app.getHttpServer())
       .post('/send')
       .send({
@@ -162,16 +177,22 @@ describe('send (e2e) Tezos', () => {
       payload: 'test',
     };
 
-    const signature2 = await new TezosCryptoClient().signMessage(
+    const bytes = toHex(
       [
+        'Tezos Signed Message: ',
         notification.recipient,
         notification.title,
         notification.body,
         notification.timestamp,
         notification.payload,
-      ].join(':'),
-      { privateKey: Buffer.from(keyPairDapp.privateKey) },
+      ].join(' '),
     );
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
+
+    const signature2 = await new TezosCryptoClient().signMessage(payloadBytes, {
+      privateKey: Buffer.from(keyPairDapp.privateKey),
+    });
 
     const resp = await request(app.getHttpServer())
       .post('/send')
@@ -216,16 +237,22 @@ describe('send (e2e) Tezos', () => {
       payload: 'test',
     };
 
-    const signature2 = await new TezosCryptoClient().signMessage(
+    const bytes = toHex(
       [
+        'Tezos Signed Message: ',
         notification.recipient,
         notification.title,
         notification.body,
         notification.timestamp,
         notification.payload,
-      ].join(':'),
-      { privateKey: Buffer.from(keyPairDapp.privateKey) },
+      ].join(' '),
     );
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
+
+    const signature2 = await new TezosCryptoClient().signMessage(payloadBytes, {
+      privateKey: Buffer.from(keyPairDapp.privateKey),
+    });
 
     const resp = await request(app.getHttpServer())
       .post('/send')
@@ -267,16 +294,22 @@ describe('send (e2e) Tezos', () => {
       payload: 'test',
     };
 
-    const signature2 = await new TezosCryptoClient().signMessage(
+    const bytes = toHex(
       [
+        'Tezos Signed Message: ',
         notification.recipient,
         notification.title,
         notification.body,
         notification.timestamp,
         notification.payload,
-      ].join(':'),
-      { privateKey: Buffer.from(keyPairDapp.privateKey) },
+      ].join(' '),
     );
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
+
+    const signature2 = await new TezosCryptoClient().signMessage(payloadBytes, {
+      privateKey: Buffer.from(keyPairDapp.privateKey),
+    });
 
     const resp = await request(app.getHttpServer())
       .post('/send')

@@ -28,9 +28,14 @@ const sendPush = async (accessToken: any) => {
 
   const keyPair = await getKeypairFromSeed('test');
 
-  const constructedString = [recipient, title, body, timestamp, payload].join(
-    ':',
-  );
+  const constructedString = [
+    'Tezos Signed Message: ',
+    recipient,
+    title,
+    body,
+    timestamp,
+    payload,
+  ].join(' ');
 
   const signature = await cryptoClient.signMessage(constructedString, {
     privateKey: Buffer.from(keyPair.privateKey),
