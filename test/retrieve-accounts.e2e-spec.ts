@@ -50,6 +50,7 @@ describe('retrieve accounts (e2e)', () => {
         .expect(200);
 
       const constructedString = [
+        'Tezos Signed Message: ',
         response.body.id,
         response.body.timestamp,
         Buffer.from(keyPairAddr.publicKey).toString('hex'),
@@ -57,7 +58,8 @@ describe('retrieve accounts (e2e)', () => {
       ].join(' ');
 
       const bytes = toHex(constructedString);
-      const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
+      const payloadBytes =
+        '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
 
       const cryptoClient = new TezosCryptoClient();
       const signature = await cryptoClient.signMessage(payloadBytes, {
@@ -171,6 +173,7 @@ describe('retrieve accounts (e2e)', () => {
 
     const bytes = toHex(
       [
+        'Tezos Signed Message: ',
         retrieveAccounts.accountPublicKey,
         retrieveAccounts.protocolIdentifier,
         retrieveAccounts.deviceId,
@@ -178,7 +181,8 @@ describe('retrieve accounts (e2e)', () => {
         challenge_response.body.timestamp,
       ].join(' '),
     );
-    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
 
     const signature = await new TezosCryptoClient().signMessage(payloadBytes, {
       privateKey: Buffer.from(keyPairAddress.privateKey),
@@ -234,6 +238,7 @@ describe('retrieve accounts (e2e)', () => {
 
     const bytes = toHex(
       [
+        'Tezos Signed Message: ',
         retrieveAccounts.accountPublicKey,
         retrieveAccounts.protocolIdentifier,
         retrieveAccounts.deviceId,
@@ -241,7 +246,8 @@ describe('retrieve accounts (e2e)', () => {
         challenge_response.body.timestamp,
       ].join(' '),
     );
-    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
 
     const signature = await new TezosCryptoClient().signMessage(payloadBytes, {
       privateKey: Buffer.from(keyPairAddress.privateKey),

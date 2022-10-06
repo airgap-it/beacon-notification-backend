@@ -38,6 +38,7 @@ describe('AppController (e2e) Tezos', () => {
     const keyPair = await getKeypairFromSeed(testSeed);
 
     const constructedString = [
+      'Tezos Signed Message: ',
       response.body.id,
       response.body.timestamp,
       Buffer.from(keyPair.publicKey).toString('hex'),
@@ -45,7 +46,8 @@ describe('AppController (e2e) Tezos', () => {
     ].join(' ');
 
     const bytes = toHex(constructedString);
-    const payloadBytes = '05' + '0100' + toHex(bytes.length) + bytes;
+    const payloadBytes =
+      '05' + '01' + bytes.length.toString(16).padStart(8, '0') + bytes;
 
     const cryptoClient = new TezosCryptoClient();
     const signature = await cryptoClient.signMessage(payloadBytes, {
