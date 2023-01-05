@@ -4,7 +4,7 @@ variables:
   GOOGLE_TAG_LATEST: eu.gcr.io/papers-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:latest
   GOOGLE_TAG_DEV: eu.gcr.io/papers-dev-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:$CI_COMMIT_SHA
   GOOGLE_TAG_LATEST_DEV: eu.gcr.io/papers-dev-kubernetes/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:latest
-  NAMESPACE: beacon-notification-oracle
+  NAMESPACE: beacon-notification-backend
 
 
 default:
@@ -136,8 +136,8 @@ k8s-deploy-development:
   tags:
     - docker
   environment:
-    name: beacon-notification-oracle-development
-    url: https://beacon-notification-oracle.dev.gke.papers.tech/
+    name: beacon-notification-backend-development
+    url: https://beacon-notification-backend.dev.gke.papers.tech/
 
 k8s-deploy-production:
   stage: deploy
@@ -170,8 +170,8 @@ k8s-deploy-production:
   tags:
     - docker
   environment:
-    name: beacon-notification-oracle-production
-    url: https://beacon-notification-oracle.prod.gke.papers.tech/
+    name: beacon-notification-backend-production
+    url: https://beacon-notification-backend.prod.gke.papers.tech/
 
 provision-db-development:
   stage: provision

@@ -75,12 +75,12 @@ describe('AppController', () => {
 //       expect(await appController.getPublicKey()).toBe('edasdf');
 //     });
 
-//     it('should return "Beacon Notification Oracle"', async () => {
-//       expect(await appController.getHello()).toBe('Beacon Notification Oracle');
+//     it('should return "Beacon Notification Backend"', async () => {
+//       expect(await appController.getHello()).toBe('Beacon Notification Backend');
 //     });
 
-//     it('should return "Beacon Notification Oracle"', async () => {
-//       expect(await appController.getHello()).toBe('Beacon Notification Oracle');
+//     it('should return "Beacon Notification Backend"', async () => {
+//       expect(await appController.getHello()).toBe('Beacon Notification Backend');
 //     });
 //   });
 

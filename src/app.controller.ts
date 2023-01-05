@@ -53,7 +53,7 @@ export class AppController {
 
   @Get()
   async getHello(): Promise<string> {
-    return 'Beacon Notification Oracle';
+    return 'Beacon Notification Backend';
   }
 
   /**
@@ -65,7 +65,7 @@ export class AppController {
   }
 
   /**
-   * Returns the PublicKey of the Push Oracle
+   * Returns the PublicKey of the Push Backend
    */
   @Get('/publicKey')
   async getPublicKey(): Promise<PublicKeyResponse> {

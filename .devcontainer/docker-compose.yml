@@ -31,7 +31,7 @@ services:
     image: postgres:latest
     restart: unless-stopped
     volumes:
-      - postgres-data-beacon-oracle:/var/lib/postgresql/data
+      - postgres-data-beacon-backend:/var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
@@ -42,4 +42,4 @@ services:
     # (Adding the "ports" property to this file will not forward from a Codespace.)
 
 volumes:
-  postgres-data-beacon-oracle:
+  postgres-data-beacon-backend:
