@@ -1,73 +1,61 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+# Beacon Notification Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This project is a small webserver that enables notification support for Beacon DApps / Wallets.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The beacon-notification-backend backend gives DApps an endpoint to send notifications, as well as capabilities for wallets to register, manage and and revoke DApp access.
 
-## Description
+## Usage
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### DApp Developers
+
+DApp developers do not have to host the beacon-notification-backend. The wallet is in charge of hosting it and the URL will be shared with the dApp as part of the pairing process.
+
+### Wallet Developers
+
+Wallet developers can either host their instance of the beacon-notification-backend, or they can use the one hosted by the beacon team.
+
+In any case, the wallet team needs to write and host a service that sends out the actual notifications to their users. Whenever the beacon-notification-backend receives a request from the dApp, it will send a POST request to that service, which is then responsible to send out the notification to the user.
+
+Using this design, it is possible to re-use the beacon-notification-backend to send any kind of notifications. It can be used for push notifications, email notifications, discord messages, telegram messages, etc. It will be the wallets responsibility to obtain the information of the user, eg. email address or discord username. Many wallets already have such notification mechanisms in place (eg. Push Notifications), so all that needs to be done is adding a new endpoint to their backend that is compatible with the beacon-notification-backend POST request.
+
+#### Push Notifications
 
 ## Installation
 
-```bash
-$ npm install
-```
+### Docker
 
-## Running the app
+The easiest way to run the project is to use `docker` and `docker-compose`. If you have docker installed, simply run the following command.
 
-```bash
-# development
-$ npm run start
+`docker-compose --project-name beacon-notification-backend -f ./.devcontainer/docker-compose.yml up`
 
-# watch mode
-$ npm run start:dev
+Then install the dependencies.
 
-# production mode
-$ npm run start:prod
-```
+`npm i`
 
-## Test
+Note: On some systems, the prebuilt binaries for "sqlite3" are not available. If they are not available and cannot be built locally, `npm i` fails with a "node-gyp" error. If this happens, remove "sqlite3" from the dependencies in the package.json. docker-compose will start a local database, so the sqlite3 package is not needed. 
 
-```bash
-# unit tests
-$ npm run test
+### Without Docker
 
-# e2e tests
-$ npm run test:e2e
+Make sure you have node and npm installed, then install the dependencies.
 
-# test coverage
-$ npm run test:cov
-```
+`npm i`
 
-## Support
+## Running the project
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+`npm start`
 
-## Stay in touch
+Now you can access the server under `http://localhost:3000/`
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Tests
 
-## License
+You can run tests by running the command
 
-Nest is [MIT licensed](LICENSE).
+`npm run test`
+
+To run end to end tests, first, start the server with
+
+`npm start`
+
+then run the following command (without stopping the server, eg, in a new terminal window)
+
+`npm run test:e2e`
